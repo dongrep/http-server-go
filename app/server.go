@@ -42,9 +42,19 @@ func main() {
 		fmt.Println("Invalid path")
 	}
 
+	pathParams := strings.Split(path, "/")
+	if pathParams[0] == "" {
+		fmt.Println("Invalid path")
+	}
+
 	switch path {
 	case "/":
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+
+	// case to handle /echo/{message} path
+	case "/echo/" + pathParams[2]:
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n" + pathParams[2]))
+
 	default:
 		_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
