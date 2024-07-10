@@ -22,5 +22,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	buff := make([]byte, 1024)
+
+	data, err := conn.Read(buff)
+	if err != nil {
+		fmt.Println("Could not read from connection")
+	}
+
+	fmt.Println("Received from request: ", data)
+
+	_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	if err != nil {
+		fmt.Println("Could not write to connection")
+	}
 }
