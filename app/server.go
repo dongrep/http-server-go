@@ -42,24 +42,17 @@ func main() {
 		fmt.Println("Invalid path")
 	}
 
-	pathParams := strings.Split(path, "/")
-	if pathParams[0] == "" {
-		fmt.Println("Invalid path")
-	}
-
-	switch path {
-	case "/":
+	if path == "/" {
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-
-	// case to handle /echo/{message} path
-	case "/echo/" + pathParams[2]:
-		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(pathParams[2])) + "\r\n\r\n" + pathParams[2]))
-
-	default:
+	} else if strings.Contains(path, "/echo/") {
+		message := strings.Split(path, "/echo/")[1]
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(message)) + "\r\n\r\n" + message))
+	} else {
 		_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
 
 	if err != nil {
 		fmt.Println("Could not write to connection")
+		return
 	}
 }
