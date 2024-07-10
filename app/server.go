@@ -64,6 +64,22 @@ func handleConnection(conn net.Conn) {
 	case "/echo":
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(pathParams[2])) + "\r\n\r\n" + pathParams[2]))
 
+	case "/files":
+		if pathParams[2] == "" {
+			fmt.Println("Invalid pathParams")
+			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		}
+		content, err := readFile(pathParams[2])
+		if err != nil {
+			fmt.Println("Could not read file")
+			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + fmt.Sprint(len(content)) + "\r\n\r\n" + content))
+		if err != nil {
+			fmt.Println("Could not write to connection")
+			return
+		}
 	case "/user-agent":
 		requestFields := strings.Split(data, "\r\n")
 		for _, field := range requestFields {
@@ -80,4 +96,13 @@ func handleConnection(conn net.Conn) {
 	if err != nil {
 		fmt.Println("Could not write to connection")
 	}
+}
+
+func readFile(path string) (string, error) {
+	dir := os.Args[2]
+	content, err := os.ReadFile(dir + path)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
