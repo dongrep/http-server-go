@@ -45,31 +45,43 @@ func handleConnection(conn net.Conn) {
 	fmt.Printf("Received from request: %s", data)
 
 	requestParts := strings.Split(data, " ")
-	path := requestParts[1]
-	if path == "" {
+	reqType := requestParts[0]
+	urlPath := requestParts[1]
+	if urlPath == "" {
 		fmt.Println("Invalid path")
 	}
 
-	pathParams := strings.Split(path, "/")
-	if pathParams[1] == "" {
+	urlPathParams := strings.Split(urlPath, "/")
+	if urlPathParams[1] == "" {
 		fmt.Println("Invalid pathParams")
 	}
 
-	path = "/" + pathParams[1]
+	urlPath = "/" + urlPathParams[1]
 
-	switch path {
+	switch reqType {
+	case "GET":
+		handleGetRequest(conn, urlPath, urlPathParams, data)
+	case "POST":
+		handlePostRequest(conn, urlPath, urlPathParams, data)
+	}
+
+}
+
+func handleGetRequest(conn net.Conn, urlPath string, urlPathParams []string, data string) {
+	var err error
+	switch urlPath {
 	case "/":
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
 	case "/echo":
-		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(pathParams[2])) + "\r\n\r\n" + pathParams[2]))
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(urlPathParams[2])) + "\r\n\r\n" + urlPathParams[2]))
 
 	case "/files":
-		if pathParams[2] == "" {
+		if urlPathParams[2] == "" {
 			fmt.Println("Invalid pathParams")
 			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		}
-		content, err := readFile(pathParams[2])
+		content, err := readFile(urlPathParams[2])
 		if err != nil {
 			fmt.Println("Could not read file")
 			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
@@ -92,10 +104,37 @@ func handleConnection(conn net.Conn) {
 	default:
 		_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
+	if err != nil {
+		fmt.Println("Could not write to connection")
+	}
+}
+
+func handlePostRequest(conn net.Conn, urlPath string, urlPathParams []string, data string) {
+	var err error
+
+	switch urlPath {
+	case "/files":
+		if urlPathParams[2] == "" {
+			fmt.Println("Invalid pathParams")
+			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		}
+		err := writeToFile(urlPathParams[2], data)
+		if err != nil {
+			fmt.Println("Could not write to file")
+			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			return
+		}
+		_, err = conn.Write([]byte("HTTP/1.1 201 Created\r\n"))
+		if err != nil {
+			fmt.Println("Could not write to connection")
+			return
+		}
+	}
 
 	if err != nil {
 		fmt.Println("Could not write to connection")
 	}
+
 }
 
 func readFile(path string) (string, error) {
@@ -105,4 +144,13 @@ func readFile(path string) (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+func writeToFile(path string, data string) error {
+	dir := os.Args[2]
+	err := os.WriteFile(dir+path, []byte(data), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
