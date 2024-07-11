@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"net"
 	"os"
@@ -74,7 +76,7 @@ func handleGetRequest(conn net.Conn, urlPath string, urlPathParams []string, dat
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
 	case "/echo":
-		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(urlPathParams[2])) + "\r\n\r\n" + urlPathParams[2]))
+		handleEchoRequest(conn, data, urlPathParams[2])
 
 	case "/files":
 		if urlPathParams[2] == "" {
@@ -160,4 +162,40 @@ func writeToFile(path string, data string) error {
 		return err
 	}
 	return nil
+}
+
+func handleEchoRequest(conn net.Conn, data string, echoData string) {
+	dataSplit := strings.Split(data, "\r\n")
+	for _, field := range dataSplit {
+		if strings.Contains(field, "Accept-Encoding") {
+			fieldValue := strings.Split(field, ": ")
+			if fieldValue[1] == "gzip" {
+				encodedData, err := gzipEncode(echoData)
+				if err != nil {
+					fmt.Println("Could not encode data")
+				}
+				_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: " + fmt.Sprint(len(string(encodedData))) + "\r\n\r\n" + string(encodedData)))
+				if err != nil {
+					fmt.Println("Could not write to connection")
+				}
+				return
+			}
+		}
+	}
+	_, err := conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + fmt.Sprint(len(echoData)) + "\r\n\r\n" + echoData))
+
+	if err != nil {
+		fmt.Println("Could not write to connection")
+	}
+}
+
+func gzipEncode(data string) (int, error) {
+	var buff bytes.Buffer
+	w := gzip.NewWriter(&buff)
+	encodeData, err := w.Write([]byte(data))
+	if err != nil {
+		return 0, err
+	}
+	w.Close()
+	return encodeData, nil
 }
