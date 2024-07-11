@@ -172,11 +172,11 @@ func handleEchoRequest(conn net.Conn, data string, echoData string) {
 			encodingTypes := strings.Split(fieldValue[1], ", ")
 			for _, fieldValue := range encodingTypes {
 				if fieldValue == "gzip" {
-					encodedData, err := gzipEncode(echoData)
+					b, err := gzipEncode(echoData)
 					if err != nil {
 						fmt.Println("Could not encode data")
 					}
-					_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: " + fmt.Sprint(len(string(encodedData))) + "\r\n\r\n" + string(encodedData)))
+					_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: " + fmt.Sprint(len(b.String())) + "\r\n\r\n" + b.String()))
 					if err != nil {
 						fmt.Println("Could not write to connection")
 					}
@@ -192,13 +192,10 @@ func handleEchoRequest(conn net.Conn, data string, echoData string) {
 	}
 }
 
-func gzipEncode(data string) (int, error) {
+func gzipEncode(data string) (bytes.Buffer, error) {
 	var buff bytes.Buffer
 	w := gzip.NewWriter(&buff)
-	encodeData, err := w.Write([]byte(data))
-	if err != nil {
-		return 0, err
-	}
+	w.Write([]byte(data))
 	w.Close()
-	return encodeData, nil
+	return buff, nil
 }
