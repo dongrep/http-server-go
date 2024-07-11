@@ -169,16 +169,19 @@ func handleEchoRequest(conn net.Conn, data string, echoData string) {
 	for _, field := range dataSplit {
 		if strings.Contains(field, "Accept-Encoding") {
 			fieldValue := strings.Split(field, ": ")
-			if fieldValue[1] == "gzip" {
-				encodedData, err := gzipEncode(echoData)
-				if err != nil {
-					fmt.Println("Could not encode data")
+			encodingTypes := strings.Split(fieldValue[1], ", ")
+			for _, fieldValue := range encodingTypes {
+				if fieldValue == "gzip" {
+					encodedData, err := gzipEncode(echoData)
+					if err != nil {
+						fmt.Println("Could not encode data")
+					}
+					_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: " + fmt.Sprint(len(string(encodedData))) + "\r\n\r\n" + string(encodedData)))
+					if err != nil {
+						fmt.Println("Could not write to connection")
+					}
+					return
 				}
-				_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: " + fmt.Sprint(len(string(encodedData))) + "\r\n\r\n" + string(encodedData)))
-				if err != nil {
-					fmt.Println("Could not write to connection")
-				}
-				return
 			}
 		}
 	}
