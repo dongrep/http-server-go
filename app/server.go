@@ -118,13 +118,15 @@ func handlePostRequest(conn net.Conn, urlPath string, urlPathParams []string, da
 			fmt.Println("Invalid pathParams")
 			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		}
-		err := writeToFile(urlPathParams[2], data)
+		dataSplit := strings.Split(data, "\r\n\r\n")
+		dataToWrite := dataSplit[len(dataSplit)-1]
+		err := writeToFile(urlPathParams[2], dataToWrite)
 		if err != nil {
 			fmt.Println("Could not write to file")
 			_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 			return
 		}
-		_, err = conn.Write([]byte("HTTP/1.1 201 Created\r\n"))
+		_, err = conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 		if err != nil {
 			fmt.Println("Could not write to connection")
 			return
@@ -147,7 +149,12 @@ func readFile(path string) (string, error) {
 }
 
 func writeToFile(path string, data string) error {
-	dir := os.Args[2]
+	var dir string
+	if len(os.Args) < 3 {
+		dir = ""
+	} else {
+		dir = os.Args[2]
+	}
 	err := os.WriteFile(dir+path, []byte(data), 0644)
 	if err != nil {
 		return err
